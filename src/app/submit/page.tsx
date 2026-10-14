@@ -319,7 +319,7 @@ export default function SubmitPhotoPage() {
                 className="mt-1 accent-[#86BDE8]"
               />
               <span>
-                (Optional) I also give explicit permission for CloudsArchive to feature this photograph on the official @CloudsArchive Instagram page with full photographer credit.
+                (Optional) I also give explicit permission for CloudsArchive to feature this photograph on the official @CloudsArchive.in Instagram page with full photographer credit.
               </span>
             </label>
           </fieldset>
