@@ -1,25 +1,38 @@
-import { NextRequest, NextResponse } from 'next/server';
-import crypto from 'crypto';
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+import crypto from "crypto";
 
-// Verify actual file header bytes (JPEG, PNG, WebP)
-function verifyImageMagicBytes(buffer: Uint8Array): 'jpg' | 'png' | 'webp' | null {
-  if (buffer.length < 12) return null;
+export const runtime = "nodejs";
 
-  // JPEG: FF D8 FF
-  if (buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
-    return 'jpg';
-  }
-  // PNG: 89 50 4E 47 0D 0A 1A 0A
+function detectImageType(buffer: Uint8Array): {
+  ext: string;
+  mime: string;
+} | null {
   if (
+    buffer.length >= 3 &&
+    buffer[0] === 0xff &&
+    buffer[1] === 0xd8 &&
+    buffer[2] === 0xff
+  ) {
+    return { ext: "jpg", mime: "image/jpeg" };
+  }
+
+  if (
+    buffer.length >= 8 &&
     buffer[0] === 0x89 &&
     buffer[1] === 0x50 &&
     buffer[2] === 0x4e &&
-    buffer[3] === 0x47
+    buffer[3] === 0x47 &&
+    buffer[4] === 0x0d &&
+    buffer[5] === 0x0a &&
+    buffer[6] === 0x1a &&
+    buffer[7] === 0x0a
   ) {
-    return 'png';
+    return { ext: "png", mime: "image/png" };
   }
-  // WebP: "RIFF" .... "WEBP"
+
   if (
+    buffer.length >= 12 &&
     buffer[0] === 0x52 &&
     buffer[1] === 0x49 &&
     buffer[2] === 0x46 &&
@@ -29,85 +42,146 @@ function verifyImageMagicBytes(buffer: Uint8Array): 'jpg' | 'png' | 'webp' | nul
     buffer[10] === 0x42 &&
     buffer[11] === 0x50
   ) {
-    return 'webp';
+    return { ext: "webp", mime: "image/webp" };
   }
+
   return null;
 }
 
 export async function POST(req: NextRequest) {
+  let uploadedPath: string | null = null;
+  let supabase: ReturnType<typeof createClient> | null = null;
+
   try {
-    const formData = await req.formData();
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-    const submitterName = String(formData.get('submitter_name') || '').trim();
-    const submitterEmail = String(formData.get('submitter_email') || '').trim();
-    const title = String(formData.get('title') || '').trim();
-    const categorySlug = String(formData.get('category_slug') || '').trim();
-    const ownershipConfirmed = formData.get('ownership_confirmation') === 'on';
-    const websitePermission = formData.get('website_display_permission') === 'on';
-    const instagramPermission = formData.get('instagram_promotion_permission') === 'on';
-    const file = formData.get('photograph') as File | null;
-
-    if (!submitterName || !submitterEmail || !title || !categorySlug || !file) {
+    if (!supabaseUrl || !serviceKey) {
       return NextResponse.json(
-        { error: 'All required fields must be completed.' },
+        { error: "Supabase server configuration is missing." },
+        { status: 503 }
+      );
+    }
+
+    supabase = createClient(supabaseUrl, serviceKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    });
+
+    const form = await req.formData();
+
+    const name = String(form.get("submitter_name") || "").trim();
+    const email = String(form.get("submitter_email") || "").trim();
+    const title = String(form.get("title") || "").trim();
+    const category = String(form.get("category_slug") || "").trim();
+    const ownershipConfirmed =
+      form.get("ownership_confirmation") === "on";
+    const websitePermission =
+      form.get("website_display_permission") === "on";
+    const file = form.get("photograph");
+
+    if (
+      !name ||
+      !email ||
+      !title ||
+      !category ||
+      !(file instanceof File)
+    ) {
+      return NextResponse.json(
+        { error: "Please complete all required fields." },
+        { status: 400 }
+      );
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return NextResponse.json(
+        { error: "Please enter a valid email address." },
         { status: 400 }
       );
     }
 
     if (!ownershipConfirmed || !websitePermission) {
       return NextResponse.json(
-        { error: 'Explicit ownership and website display permissions are required.' },
+        { error: "Please confirm ownership and website display permission." },
         { status: 400 }
       );
     }
 
-    if (file.size > 15 * 1024 * 1024) {
+    if (file.size === 0 || file.size > 15 * 1024 * 1024) {
       return NextResponse.json(
-        { error: 'File exceeds maximum allowed size of 15 MB.' },
+        { error: "Choose an image smaller than 15 MB." },
         { status: 400 }
       );
     }
 
-    const arrayBuffer = await file.arrayBuffer();
-    const uint8 = new Uint8Array(arrayBuffer);
-    const detectedExt = verifyImageMagicBytes(uint8);
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const imageType = detectImageType(bytes);
 
-    if (!detectedExt) {
+    if (!imageType) {
       return NextResponse.json(
-        { error: 'Invalid image file signature. Only authentic JPEG, PNG, and WebP files are accepted.' },
+        { error: "Only valid JPEG, PNG, and WebP images are accepted." },
         { status: 400 }
       );
     }
 
-    // Generate cryptographically safe storage filename
-    const safeFilename = `${Date.now()}-${crypto.randomUUID()}.${detectedExt}`;
+    const filePath = `${crypto.randomUUID()}.${imageType.ext}`;
 
-    // Check if Supabase credentials are configured
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const { error: uploadError } = await supabase.storage
+      .from("cloud-photos")
+      .upload(filePath, bytes, {
+        contentType: imageType.mime,
+        upsert: false,
+      });
 
-    if (!supabaseUrl || !supabaseServiceKey) {
+    if (uploadError) {
+      console.error("Photo storage upload failed:", uploadError.message);
       return NextResponse.json(
-        {
-          error:
-            'Database storage is not yet configured in environment variables (NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY). See deployment guide to enable live persistence.'
-        },
-        { status: 503 }
+        { error: "Photo upload failed. Please try again later." },
+        { status: 500 }
       );
     }
 
-    // When configured, upload to private bucket `pending-submissions` and insert record with status = 'pending'
+    uploadedPath = filePath;
+
+    const { error: insertError } = await supabase
+      .from("submissions")
+      .insert({
+        name,
+        instagram_handle: null,
+        image_url: filePath,
+        caption: title,
+        status: "pending",
+      });
+
+    if (insertError) {
+      console.error("Submission database insert failed:", insertError.message);
+
+      // Remove the uploaded file if its database record could not be saved.
+      await supabase.storage.from("cloud-photos").remove([filePath]);
+      uploadedPath = null;
+
+      return NextResponse.json(
+        { error: "Your submission could not be saved. Please try again." },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json({
       success: true,
-      status: 'pending',
-      safeFilename,
-      instagramPermission,
-      message:
-        'Your photograph has been submitted for review. It will appear in the public gallery only after approval.'
+      status: "pending",
+      message: "Thanks for sharing your sky! Your photo is awaiting review.",
     });
-  } catch {
+  } catch (error) {
+    console.error("Submission processing failed:", error);
+
+    if (uploadedPath && supabase) {
+      await supabase.storage.from("cloud-photos").remove([uploadedPath]);
+    }
+
     return NextResponse.json(
-      { error: 'Unable to process submission at this time.' },
+      { error: "Unable to process your submission right now." },
       { status: 500 }
     );
   }
