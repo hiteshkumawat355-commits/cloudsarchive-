@@ -56,7 +56,7 @@ export default function Footer() {
                   rel="noopener noreferrer"
                   className="text-[#86BDE8] hover:underline inline-flex items-center gap-1"
                 >
-                  Instagram @CloudsArchive
+                  Instagram @CloudsArchive.in
                 </a>
               </li>
             </ul>
