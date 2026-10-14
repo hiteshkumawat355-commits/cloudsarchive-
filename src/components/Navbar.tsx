@@ -23,7 +23,7 @@ export default function Navbar() {
     { href: '/about', label: 'About' },
   ];
 
-  const instagramUrl = process.env.NEXT_PUBLIC_INSTAGRAM_URL || 'https://instagram.com/cloudsarchive';
+  const instagramUrl = process.env.NEXT_PUBLIC_INSTAGRAM_URL || 'https://instagram.com/cloudsarchive.in';
 
   return (
     <header
