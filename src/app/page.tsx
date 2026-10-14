@@ -5,7 +5,7 @@ import { CATEGORIES, DEMO_PHOTOGRAPHS } from '@/lib/demo-data';
 export default function HomePage() {
   const featuredPhotos = DEMO_PHOTOGRAPHS.filter((p) => p.is_featured);
   const photoOfTheWeek = DEMO_PHOTOGRAPHS.find((p) => p.is_photo_of_the_week) || DEMO_PHOTOGRAPHS[0];
-  const instagramUrl = process.env.NEXT_PUBLIC_INSTAGRAM_URL || 'https://instagram.com/cloudsarchive';
+  const instagramUrl = process.env.NEXT_PUBLIC_INSTAGRAM_URL || 'https://instagram.com/cloudsarchive.in';
 
   return (
     <main className="min-h-screen bg-[#0B0D10] text-[#F4F5F6]">
@@ -292,7 +292,7 @@ export default function HomePage() {
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 px-6 py-3 border border-[#86BDE8] text-[#86BDE8] text-sm font-medium rounded hover:bg-[#86BDE8] hover:text-[#0B0D10] transition-colors"
             >
-              Follow @CloudsArchive
+              Follow @CloudsArchive.in
             </a>
           </div>
         </div>
