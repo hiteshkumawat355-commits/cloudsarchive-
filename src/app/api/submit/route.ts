@@ -136,12 +136,12 @@ export async function POST(req: NextRequest) {
       });
 
     if (uploadError) {
-      console.error("Photo storage upload failed:", uploadError.message);
-      return NextResponse.json(
-        { error: "Photo upload failed. Please try again later." },
-        { status: 500 }
-      );
-    }
+  console.error("Photo storage upload failed:", uploadError.message);
+  return NextResponse.json(
+    { error: `Storage error: ${uploadError.message}` },
+    { status: 500 }
+  );
+}
 
     uploadedPath = filePath;
 
