@@ -3,7 +3,7 @@ import Link from 'next/link';
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
-  const instagramUrl = process.env.NEXT_PUBLIC_INSTAGRAM_URL || 'https://instagram.com/cloudsarchive';
+  const instagramUrl = process.env.NEXT_PUBLIC_INSTAGRAM_URL || 'https://instagram.com/cloudsarchive.in';
 
   return (
     <footer className="bg-[#0B0D10] border-t border-[#F4F5F6]/10 text-[#A4ABB4]">
