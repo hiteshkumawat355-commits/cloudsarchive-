@@ -43,7 +43,8 @@ export default function SubmitPhotoPage() {
       if (!response.ok) {
         throw new Error(result.error || 'Submission failed. Please check your inputs.');
       }
-      setSubmittedSuccess(true);
+      console.log("SUBMISSION API RESPONSE:", result);
+setSubmittedSuccess(true);
     } catch (err: any) {
       setErrorMessage(err.message || 'An unexpected error occurred.');
     } finally {
