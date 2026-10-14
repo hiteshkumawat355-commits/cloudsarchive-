@@ -1,14 +1,16 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 :root {
-  --bg-primary: #0B0D10;
-  --bg-secondary: #12161B;
-  --text-primary: #F4F5F6;
-  --text-secondary: #A4ABB4;
-  --accent-sky: #86BDE8;
+  --bg-primary: #0b0d10;
+  --bg-secondary: #12161b;
+  --text-primary: #f4f5f6;
+  --text-secondary: #a4abb4;
+  --accent-sky: #86bde8;
   --border-subtle: rgba(244, 245, 246, 0.09);
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
@@ -19,18 +21,22 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Reduced motion preference support */
+img {
+  max-width: 100%;
+}
+
+.protected-image {
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  *, ::before, ::after {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-}
-
-/* Protect community photographs from casual drag-and-save */
-.protected-image {
-  user-select: none;
-  -webkit-user-drag: none;
 }
